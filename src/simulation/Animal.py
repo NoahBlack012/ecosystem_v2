@@ -10,7 +10,7 @@ class animal:
         """
         -------Characteristics-------
         Endurance: Fatigue gained per space moved (1 -> 10)
-        Strength: Value that determines which animal wins in fight and how much damage each sustain (Higher value wins)
+        Strength: Value that determines which animal wins in fight and how much damage each sustain (Higher value wins) (1 -> 10)
         Speed: Spaces that an animal can move per turn (1 -> 10)
         Reproductive_score: Value that determines an animals attractiveness to a potential mate (1 -> 10)
         Position: Postion in world (0 -> n, n is size of world)
@@ -25,6 +25,7 @@ class animal:
         -------Health Values-------
         Fatigue: How tired the animal is (0 -> 100), Closer to 0 - more tired
         Hunger: How hungry the animal is (0 -> 100), Closer to 0 - more hungry
+        Thirst: How thirsty the animal is (0 -> 100), Closer to 0 - more thirsty
         Total Health: Health points - Health of the animal, (0 - 100), 0 - Dead, 100 - Perfectly healthy
         Max Total Health: Highest possible total health value
         Age: Age of animal, animal weakens with age - Endurance, strength, ect. reduce with age
@@ -32,6 +33,7 @@ class animal:
         """
         self.fatigue = 100
         self.hunger = 100
+        self.thirst = 100
         self.total_health = 100
         self.max_total_health = 100
         self.age = 0
@@ -48,13 +50,13 @@ class animal:
         """
         -------Current activities values-------
         Goal position: Position of space animal is moving towards
-        Goal type: Resource animal is moving towards
+        Goal type: Goal animal is trying to accomplish (eat, drink, reproduce, sleep)
         Priority: Priority queue for what animal must do (Eat, drink, reproduce)
         Moves: Sequence of moves to reach goal (Enqueue at front, dequeue at back)
         """
         self.goal_position = None
         self.goal_type = None
-        #self.priority =
+        self.priority = []
         self.moves = []
 
     def reproduce(self, mate):
@@ -70,11 +72,25 @@ class animal:
             if not self.sickness:
                 self.sickness = sickness
 
-        return food
+            world[self.position] = food
 
+        # Return new world state
+        return world
 
-    def drink(self, water):
-        pass
+    def drink(self, world):
+        if world[self.position].type == "water":
+            water = world[self.position]
+            sickness = water.drink()
+            self.hunger += nutrition
+            if self.hunger > 100:
+                self.hunger = 100
+            if not self.sickness:
+                self.sickness = sickness
+
+            return world[self.position] = water
+
+        # Return new world state
+        return world
 
     def rest(self):
         self.fatigue += 20
@@ -88,19 +104,39 @@ class animal:
         moves_remaining = self.speed
         while moves_remaining > 0:
             if not self.moves:
-                self.eat(goal)
-                break
+                if world[self.position].type == self.goal_type:
+                    return True
             move = self.moves.pop()
             self.position += move
             self.fatigue -= self.endurance
             moves_remaining -= 1
+        if world[self.position].type == self.goal_type:
+            return True
+        return False
 
-        if moves_remaining > 0:
-            self.get_move_sequence()
-            self.move(world)
+
+
 
     def get_priority(self):
-        pass
+        number_options = {self.hunger: "eat", self.thirst: "drink", self.fatigue: "sleep"}
+        # Sort number options highest to lowest (Lowest priority -> highest priority)
+        keys = list(number_options.keys())
+        keys.sort()
+        keys.reverse()
+
+        number_options_remaining = [number_options[i] for i in keys]
+
+        priority = []
+        while len(priority) < 4:
+            if [i for i in number_options_remaining if i < 85] and "reproduce" not in priority:
+                # If remaining scores are high enough, reproduction can be a higher priority
+                priority.append("reproduce")
+            else:
+                ## Get next item from number options and add to priority
+                next_priority = number_options_remaining.pop()
+                priority.append(next_priority)
+
+        self.priority = priority
 
     def get_nearest_item_distance(self, world, type):
         distance = 0
@@ -111,17 +147,19 @@ class animal:
             if world[self.position - distance].type == type:
                 return -distance
             distance += 1
-        return 0
+        return None
 
     def get_move_sequence(self, world):
         #Set sequence of moves to reach goal
         self.get_priority()
 
         # Get distance to item
-        distance = 0
-        while distance == 0:
+        distance = None
+        while distance is None:
+            # Set goal type to highest priority item
+            # If item
             self.goal_type = self.priority.pop(0)
-            if self.goal_type == "rest":
+            if self.goal_type == "sleep":
                 self.moves = [0, ]
                 return # Set move sequence to not moving, exit function
 

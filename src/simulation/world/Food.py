@@ -1,9 +1,9 @@
 import random
 
 class food:
-    def __init__(self, position, nutrition, amount, sickness_chance):
+    def __init__(self, nutrition, amount, sickness_chance):
         """
-        Nutrition: Hunger value lost from food
+        Nutrition: Hunger value gained from food
         Amount: Number of servings avalible
         Sickness chance: % Chance of getting sickness - Sickness reduces health
         """
@@ -24,4 +24,4 @@ class food:
         if sickness_value < self.sickness_chance:
             sickness = True
 
-        return self.nutrition, sickness
+        return sickness
