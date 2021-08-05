@@ -8,7 +8,7 @@ class food:
         Sickness chance: % Chance of getting sickness - Sickness reduces health
         """
         self.type = "food"
-        self.position = position
+    #    self.position = position
         self.nutrition = nutrition
         self.amount = amount
         self.sickness_chance = sickness_chance

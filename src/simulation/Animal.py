@@ -64,6 +64,9 @@ class animal:
 
     def eat(self, world):
         if world[self.position].type == "food":
+            if world[self.position].finished:
+                # If food is finished, exit
+                return world
             food = world[self.position]
             nutrition, sickness = food.eat()
             self.hunger += nutrition
@@ -79,15 +82,15 @@ class animal:
 
     def drink(self, world):
         if world[self.position].type == "water":
+            if world[self.position].finished:
+                # If water is finished, exit
+                return world
             water = world[self.position]
             sickness = water.drink()
-            self.hunger += nutrition
-            if self.hunger > 100:
-                self.hunger = 100
             if not self.sickness:
                 self.sickness = sickness
 
-            return world[self.position] = water
+            world[self.position] = water
 
         # Return new world state
         return world
@@ -97,9 +100,11 @@ class animal:
         self.sickness = False
 
     def move(self, world):
+        if not self.goal_position or not self.goal_type:
+            self.get_move_sequence(world)
         goal = world[self.goal_position]
         if goal.type != self.goal_type:
-            self.get_move_sequence()
+            self.get_move_sequence(world)
 
         moves_remaining = self.speed
         while moves_remaining > 0:
@@ -108,27 +113,26 @@ class animal:
                     return True
             move = self.moves.pop()
             self.position += move
+            self.hunger -= 5 #Replace with animal-specific value
+            self.thirst -= 5 #Replace with animal-specific value
             self.fatigue -= self.endurance
+
             moves_remaining -= 1
         if world[self.position].type == self.goal_type:
             return True
         return False
 
 
-
-
     def get_priority(self):
-        number_options = {self.hunger: "eat", self.thirst: "drink", self.fatigue: "sleep"}
+        number_options = {"food": self.hunger, "water": self.thirst, "sleep": self.fatigue}
+        number_options = {key : value for key, value in sorted(number_options.items())}
         # Sort number options highest to lowest (Lowest priority -> highest priority)
-        keys = list(number_options.keys())
-        keys.sort()
-        keys.reverse()
+        number_options_remaining = [i for i in number_options]
 
-        number_options_remaining = [number_options[i] for i in keys]
 
         priority = []
         while len(priority) < 4:
-            if [i for i in number_options_remaining if i < 85] and "reproduce" not in priority:
+            if ([i for i in number_options_remaining if number_options[i] < 85] and "reproduce" not in priority) or not number_options_remaining:
                 # If remaining scores are high enough, reproduction can be a higher priority
                 priority.append("reproduce")
             else:
@@ -141,18 +145,19 @@ class animal:
     def get_nearest_item_distance(self, world, type):
         distance = 0
         world_size = len(world)
-        while self.position - distance >= 0 and self.position + distance < world_size:
-            if world[self.position + distance].type == type:
-                return distance
-            if world[self.position - distance].type == type:
-                return -distance
+        while self.position - distance >= 0 or self.position + distance < world_size:
+            if self.position + distance < world_size:
+                if world[self.position + distance].type == type:
+                    return distance
+            if self.position - distance > 0:
+                if world[self.position - distance].type == type:
+                    return -distance
             distance += 1
         return None
 
     def get_move_sequence(self, world):
         #Set sequence of moves to reach goal
         self.get_priority()
-
         # Get distance to item
         distance = None
         while distance is None:
