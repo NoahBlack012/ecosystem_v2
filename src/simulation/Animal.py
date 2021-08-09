@@ -1,4 +1,5 @@
 ## Imports
+import random
 
 ## Helper functions
 
@@ -12,15 +13,19 @@ class animal:
         Endurance: Fatigue gained per space moved (1 -> 10)
         Strength: Value that determines which animal wins in fight and how much damage each sustain (Higher value wins) (1 -> 10)
         Speed: Spaces that an animal can move per turn (1 -> 10)
-        Reproductive_score: Value that determines an animals attractiveness to a potential mate (1 -> 10)
+        Reproductive_score: Value that determines an animals attractiveness to a potential mate (1 -> 100)
         Position: Postion in world (0 -> n, n is size of world)
+        Gender: M/F
         """
         self.endurance = endurance
         self.strength = strength
         self.speed = speed
         self.reproductive_score = reproductive_score
         self.position = position
-
+        if random.randint(1, 2) % 2 == 0:
+            self.gender = "m"
+        else:
+            self.gender = "f"
         """
         -------Health Values-------
         Fatigue: How tired the animal is (0 -> 100), Closer to 0 - more tired
@@ -58,9 +63,32 @@ class animal:
         self.goal_type = None
         self.priority = []
         self.moves = []
+        self.number_reproduced = 0
 
     def reproduce(self, mate):
-        pass
+        if self.gender == "f":
+            new_position = self.position
+        else:
+            new_position = mate.position
+
+        def create_attribute(a, b):
+            if a < b:
+                return random.randint(a, b)
+            else:
+                return random.randint(b, a)
+
+        # Create animal attributes
+        endurance = create_attribute(self.endurance, mate.endurance)
+        strength = create_attribute(self.strength, mate.strength)
+        speed = create_attribute(self.speed, mate.speed)
+        reproductive_score = create_attribute(self.reproductive_score, mate.reproductive_score)
+        position = new_position
+
+        # Create animal object
+        new_animal = animal(endurance, strength, speed, reproductive_score, position)
+        self.number_reproduced += 1
+
+        return new_animal
 
     def eat(self, world):
         if world[self.position].type == "food":
@@ -68,8 +96,8 @@ class animal:
                 # If food is finished, exit
                 return world
             food = world[self.position]
-            nutrition, sickness = food.eat()
-            self.hunger += nutrition
+            sickness = food.eat()
+            self.hunger += food.nutrition
             if self.hunger > 100:
                 self.hunger = 100
             if not self.sickness:
@@ -107,6 +135,11 @@ class animal:
             self.get_move_sequence(world)
 
         moves_remaining = self.speed
+        if self.sickness:
+            self.hunger -= 5
+            self.thirst -= 5
+            self.fatigue -= 5
+
         while moves_remaining > 0:
             if not self.moves:
                 if world[self.position].type == self.goal_type:
@@ -129,16 +162,15 @@ class animal:
         # Sort number options highest to lowest (Lowest priority -> highest priority)
         number_options_remaining = [i for i in number_options]
 
-
-        priority = []
-        while len(priority) < 4:
-            if ([i for i in number_options_remaining if number_options[i] < 85] and "reproduce" not in priority) or not number_options_remaining:
-                # If remaining scores are high enough, reproduction can be a higher priority
-                priority.append("reproduce")
-            else:
-                ## Get next item from number options and add to priority
-                next_priority = number_options_remaining.pop()
-                priority.append(next_priority)
+        priority = number_options_remaining
+        # while len(priority) < 4:
+        #     if ([i for i in number_options_remaining if number_options[i] < 85] and "reproduce" not in priority) or not number_options_remaining:
+        #         # If remaining scores are high enough, reproduction can be a higher priority
+        #         priority.append("reproduce")
+        #     else:
+        #         ## Get next item from number options and add to priority
+        #         next_priority = number_options_remaining.pop()
+        #         priority.append(next_priority)
 
         self.priority = priority
 
@@ -162,7 +194,6 @@ class animal:
         distance = None
         while distance is None:
             # Set goal type to highest priority item
-            # If item
             self.goal_type = self.priority.pop(0)
             if self.goal_type == "sleep":
                 self.moves = [0, ]
